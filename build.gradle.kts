@@ -246,7 +246,7 @@ dependencies {
 
     implementation("thedarkcolour:kotlinforforge-neoforge:5.10.0")
 
-    implementation("software.bernie.geckolib:geckolib-neoforge-1.21.1:4.7.5")
+    jijImplement("software.bernie.geckolib:geckolib-neoforge-1.21.1:4.7.5")
 
     // curios
     jijImplement("top.theillusivec4.curios:curios-neoforge:9.2.0+1.21.1")
@@ -256,7 +256,7 @@ dependencies {
     jijImplement("org.ywzj:rhino:1.8.1-SNAPSHOT")
 
     // SBM
-    jijImplement("com.github.MCModderAnchor:SimpleBedrockModel:2.5.1-neoforge-mc1.21.1")
+    jijImplement("com.github.MCModderAnchor:SimpleBedrockModel:2.5.1.1-neoforge-mc1.21.1")
 
     compileOnly("com.maydaymemory:mae:1.1.2") {
         exclude("com.google.code.findbugs", "jsr305")

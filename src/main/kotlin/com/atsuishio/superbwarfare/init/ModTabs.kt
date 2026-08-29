@@ -43,7 +43,7 @@ object ModTabs {
                 .icon { ItemStack(ModItems.TASER.get()) }
                 .displayItems { param, output ->
                     ModItems.GUNS.getEntries().forEach { registryObject ->
-                        if (registryObject === ModItems.VEHICLE_GUN) return@forEach
+                        if (registryObject === ModItems.VEHICLE_GUN || registryObject === ModItems.EMPTY_GUN) return@forEach
 
                         // 普通枪械
                         val stack = ItemStack(registryObject.get())
@@ -180,6 +180,7 @@ object ModTabs {
     fun buildTabContentsVanilla(tabData: BuildCreativeModeTabContentsEvent) {
         if (tabData.tabKey === CreativeModeTabs.SPAWN_EGGS) {
             tabData.accept(ModItems.SENPAI_SPAWN_EGG.get())
+            tabData.accept(ModItems.CREEPING_SENPAI_SPAWN_EGG.get())
             tabData.accept(ModItems.STEEL_COIL_SPAWN_EGG.get())
         }
     }

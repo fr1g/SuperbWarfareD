@@ -21,6 +21,7 @@ import com.atsuishio.superbwarfare.data.gun.subdata.*
 import com.atsuishio.superbwarfare.data.gun.value.*
 import com.atsuishio.superbwarfare.event.GunEventHandler
 import com.atsuishio.superbwarfare.init.ModItems
+import com.atsuishio.superbwarfare.item.gun.EmptyGunItem
 import com.atsuishio.superbwarfare.item.gun.GunItem
 import com.atsuishio.superbwarfare.network.message.receive.ShakeClientMessage
 import com.atsuishio.superbwarfare.perk.Perk
@@ -39,10 +40,10 @@ import net.minecraft.world.entity.Entity
 import net.minecraft.world.entity.player.Player
 import net.minecraft.world.item.Item
 import net.minecraft.world.item.ItemStack
+import net.minecraft.world.item.component.CustomData
 import net.minecraft.world.phys.Vec3
 import net.neoforged.neoforge.energy.IEnergyStorage
 import net.neoforged.neoforge.items.IItemHandler
-import org.jetbrains.annotations.ApiStatus
 import java.util.*
 import java.util.function.Function
 import kotlin.math.max
@@ -162,6 +163,8 @@ class GunData private constructor(
      */
     fun initialize() {
         item.init(this)
+
+        nbtVersion.invalidateStructural()
     }
 
     /** Returns the underlying [GunItem]. */
@@ -217,55 +220,6 @@ class GunData private constructor(
     private val jsonPropModifier = JsonPropertyModifier(GunProp.entries)
     private var cache: DefaultGunData? = null
     private var tempModifications: Function<DefaultGunData, DefaultGunData>? = null
-
-    /**
-     * Computes modified property values into a standalone [DefaultGunData] snapshot.
-     *
-     * @param useCache whether to re-use cached result if available.
-     * @return computed gun data properties.
-     * @deprecated Use [get] with [GunProp] keys instead for optimized property resolution.
-     */
-    @JvmOverloads
-    @Deprecated("Use get() instead")
-    @ApiStatus.ScheduledForRemoval
-    fun compute(useCache: Boolean = true): DefaultGunData {
-        if (cache != null && useCache) return cache!!
-
-        var rawData = getDefault().copy()
-//
-//        // property override tag
-//        jsonPropModifier.update(propertyOverrideString.get())
-//        rawData = jsonPropModifier.computeProperties(this, rawData)
-//
-//        // gun modifiers
-//        rawData = item.computeProperties(this, rawData)
-//
-//        // FireMode
-//        rawData = selectedFireModeInfo(rawData.availableFireModes()).computeProperties(this, rawData)
-//
-//        // AmmoConsumer
-//        rawData = selectedAmmoConsumer(rawData.getProcessedAmmoConsumers()).computeProperties(this, rawData)
-//
-//        // perk
-//        for (type in PERK_TYPES) {
-//            val instance = perk.get(type) ?: continue
-//
-//            rawData = instance.computeProperties(this, rawData)
-//        }
-//
-//        // Temporary property modifications
-//        if (tempModifications != null) {
-//            rawData = tempModifications!!.apply(rawData)
-//        }
-//
-//        rawData.limit()
-//        if (useCache) {
-//            cache = rawData
-//        }
-
-        return rawData
-    }
-
     private val pmcInstance: PMC<GunData, DefaultGunData> by lazy { PMC(this) }
     private var cachedStructuralVersion: Int = -1
 
@@ -453,6 +407,8 @@ class GunData private constructor(
         this.bolt.needed.reset()
         this.charge.starter.finish()
         this.charge.timer.reset()
+
+        nbtVersion.invalidateStructural()
     }
 
     /**
@@ -505,11 +461,15 @@ class GunData private constructor(
     /** Starts reload sequence in next tick update. */
     fun startReload() {
         this.reload.reloadStarter.markStart()
+
+        nbtVersion.invalidateStructural()
     }
 
     /** Starts manual bolt-action sequence. */
     fun startBolt() {
         this.bolt.actionTimer.set(get(BOLT_ACTION_TIME) + 1)
+
+        nbtVersion.invalidateStructural()
     }
 
     /**
@@ -721,6 +681,8 @@ class GunData private constructor(
 
         reload.setState(ReloadState.NOT_RELOADING)
         this.fireIndex.reset()
+
+        nbtVersion.invalidateStructural()
     }
 
     /**
@@ -1009,26 +971,38 @@ class GunData private constructor(
         val currentCombined = nbtVersion.structural + nbtVersion.state
         if (currentCombined == initialCombinedVersion) return
 
-        // TODO Implement proper empty tag removal
-//        var keysToRemove = new ArrayList<String>();
-//        for (var key : perkTag.getAllKeys()) {
-//            if (perkTag.get(key) instanceof CompoundTag compoundTag && compoundTag.isEmpty()) {
-//                keysToRemove.add(key);
-//            }
-//        }
-//        keysToRemove.forEach(perkTag::remove);
-//
-//        if (perkTag.isEmpty()) {
-//            stack.removeTagKey("Perks");
-//        }
-//
-//        if (attachmentTag.isEmpty()) {
-//            stack.removeTagKey("Attachments");
-//        }
-//
-//        if (gunDataTag.isEmpty()) {
-//            stack.removeTagKey("GunData");
-//        }
+        val keysToRemove = mutableListOf<String>()
+        for (key in perkTag.allKeys) {
+            val compoundTag = perkTag.get(key) as? CompoundTag
+            if (compoundTag?.isEmpty ?: false) {
+                keysToRemove.add(key)
+            }
+        }
+        keysToRemove.forEach { key -> perkTag.remove(key) }
+
+        val cleanedTag = tag.copy()
+
+        if (perkTag.isEmpty) {
+            cleanedTag.remove("Perks")
+        }
+
+        if (attachmentTag.isEmpty) {
+            cleanedTag.remove("Attachments")
+        }
+
+        if (gunDataTag.isEmpty) {
+            cleanedTag.remove("GunData")
+        }
+
+        if (!tag.isEmpty) {
+            val current = stack.get(DataComponents.CUSTOM_DATA)?.copyTag()
+            if (current == cleanedTag) return
+
+            stack.set(DataComponents.CUSTOM_DATA, CustomData.of(cleanedTag))
+        } else {
+            if (!stack.has(DataComponents.CUSTOM_DATA)) return
+            stack.remove(DataComponents.CUSTOM_DATA)
+        }
     }
 
     /**
@@ -1060,17 +1034,25 @@ class GunData private constructor(
     }
 
     init {
-        require(stack.item is GunItem) { "stack is not GunItem!" }
-
-        val gunItem = stack.item as GunItem
+        val realGunItem = stack.item as? GunItem
+        val useEmptyGunData = realGunItem == null || stack.isEmpty
+        val gunItem = if (useEmptyGunData) ModItems.EMPTY_GUN.get() as GunItem else realGunItem
         this.item = gunItem
         this.stack = stack
-        this.id = getRegistryId(stack.item)
+        this.id = if (useEmptyGunData) EmptyGunItem.EMPTY_GUN_ID else getRegistryId(stack.item)
 
-        this.defaultDataSupplier = initialDefaultDataSupplier ?: { gunItem.getDefaultData(this) }
+        this.defaultDataSupplier = if (useEmptyGunData) {
+            { EmptyGunItem.EMPTY_GUN_DATA }
+        } else {
+            initialDefaultDataSupplier ?: { gunItem.getDefaultData(this) }
+        }
 
-        val customData = stack.get(DataComponents.CUSTOM_DATA)
-        this.tag = if (customData != null) customData.copyTag() else CompoundTag()
+        if (useEmptyGunData) {
+            this.tag = CompoundTag()
+        } else {
+            val customData = stack.get(DataComponents.CUSTOM_DATA)
+            this.tag = if (customData != null) customData.copyTag() else CompoundTag()
+        }
 
         gunDataTag = getOrPut("GunData")
         perkTag = getOrPut("Perks")
@@ -1128,7 +1110,7 @@ class GunData private constructor(
 
     companion object {
         /** Tick interval between backup ammo inventory re-computations. */
-        const val BACKUP_AMMO_CACHE_TICKS: Long = 4L
+        const val BACKUP_AMMO_CACHE_TICKS: Long = 10L
 
         /**
          * Cached array of all [Perk.Type] entries.
@@ -1196,14 +1178,6 @@ class GunData private constructor(
             var id = item.descriptionId
             id = id.substring(id.indexOf(".") + 1).replace('.', ':')
             return id
-        }
-
-        @JvmStatic
-        @Suppress("unused")
-        @Deprecated("use get() instead", level = DeprecationLevel.ERROR)
-        @ApiStatus.ScheduledForRemoval
-        fun compute(stack: ItemStack): DefaultGunData {
-            error("use get() instead!")
         }
 
         /** Priority mapping helper for perk execution order. */

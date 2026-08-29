@@ -845,17 +845,20 @@ object VehicleMotionUtils {
                         val speed = Math.min(vehicle.deltaMovement.length(), 0.5).toFloat()
 
                         val particleOption = CustomCloudOption(
-                            color, 70, 1f + 7f * speed + Math.random().toFloat() * 2, Math.random().toFloat() * -0.12f,
-                            cooldown = false,
+                            color,
+                            70,
+                            1f + 7f * speed + Math.random().toFloat() * 2,
+                            Math.random().toFloat() * -0.12f,
+                            false,
                             light = false
                         )
                         vehicle.addRandomParticle(
                             particleOption,
                             p.add(0.0, 0.2, 0.0).subtract(vehicle.deltaMovement.scale(1.5)),
                             speed,
-                            vehicle.level(),
+                            level,
                             1,
-                            vehicle.deltaMovement.scale(60.0)
+                            vehicle.deltaMovement.scale(1.0)
                         )
                     } else {
                         val particleData = BlockParticleOption(ParticleTypes.BLOCK, state)
@@ -949,21 +952,6 @@ object VehicleMotionUtils {
 
         entity.xRot = lerpAngle(entity.xRot, -targetXRot, tiltSmoothingFactor)
         entity.setZRot(lerpAngle(entity.roll, -targetZRot, tiltSmoothingFactor))
-    }
-
-    /**
-     * @deprecated Retained for binary/source compatibility with external call sites that
-     * still call the single-point overload. Prefer [computeSupportedPosition] +
-     * the 4-argument [updateTerrainCompact] when calling in a loop, to avoid repeating
-     * the expensive [net.minecraft.world.level.CollisionGetter.findSupportingBlock] query.
-     */
-    @Deprecated(
-        message = "Recomputes findSupportingBlock on every call; use the 4-arg overload with a cached supportedPos when calling in a loop.",
-        replaceWith = ReplaceWith("updateTerrainCompact(entity, landingTarget, heightY, computeSupportedPosition(entity))")
-    )
-    @JvmStatic
-    fun updateTerrainCompact(entity: VehicleEntity, landingTarget: Vec3, heightY: Double) {
-        updateTerrainCompact(entity, landingTarget, heightY, computeSupportedPosition(entity))
     }
 
     /**

@@ -144,18 +144,12 @@ object AnimationHelper {
         if (itemStack.item !is GunItem) return
 
         val gunResource = GunResource.from(itemStack).compute()
-        if (gunResource.flarePosition != null) {
+        val pos = gunResource.flarePosition
+        if (pos != null) {
             handleShootFlare(
-                name,
-                stack,
-                itemStack,
-                bone,
-                buffer,
-                packedLightIn,
-                gunResource.flarePosition.x,
-                gunResource.flarePosition.y,
-                gunResource.flarePosition.z,
-                gunResource.flareSize.toDouble()
+                name, stack, itemStack, bone, buffer, packedLightIn,
+                pos.x, pos.y,
+                pos.z, gunResource.flareSize.toDouble()
             )
         }
     }
@@ -485,7 +479,6 @@ object AnimationHelper {
         }
 
         val mc = Minecraft.getInstance()
-
         if (localPlayer == null) {
             return
         }
@@ -518,9 +511,6 @@ object AnimationHelper {
         }
 
         val loc = localPlayer.skin.texture
-        val armBuilder = currentBuffer.getBuffer(RenderType.entitySolid(loc))
-        val sleeveBuilder = currentBuffer.getBuffer(RenderType.entityTranslucent(loc))
-
         val overlayTexture = if (activeThermalImaging) OverlayTexture.pack(15, 10) else OverlayTexture.NO_OVERLAY
 
         var effectivePackedLight = packedLightIn
@@ -542,12 +532,19 @@ object AnimationHelper {
                 0.0f
             )
             if (useOldHandRender) {
-                renderPartOverBone(model.leftArm, bone, stack, armBuilder, effectivePackedLight, overlayTexture)
+                renderPartOverBone(
+                    model.leftArm,
+                    bone,
+                    stack,
+                    currentBuffer.getBuffer(RenderType.entitySolid(loc)),
+                    effectivePackedLight,
+                    overlayTexture
+                )
                 renderPartOverBone(
                     model.leftSleeve,
                     bone,
                     stack,
-                    sleeveBuilder,
+                    currentBuffer.getBuffer(RenderType.entityTranslucent(loc)),
                     effectivePackedLight,
                     overlayTexture,
                 )
@@ -556,7 +553,7 @@ object AnimationHelper {
                     model.leftArm,
                     bone,
                     stack,
-                    armBuilder,
+                    currentBuffer.getBuffer(RenderType.entitySolid(loc)),
                     effectivePackedLight,
                     overlayTexture,
                 )
@@ -564,7 +561,7 @@ object AnimationHelper {
                     model.leftSleeve,
                     bone,
                     stack,
-                    sleeveBuilder,
+                    currentBuffer.getBuffer(RenderType.entityTranslucent(loc)),
                     effectivePackedLight,
                     overlayTexture,
                 )
@@ -583,7 +580,7 @@ object AnimationHelper {
                     model.rightArm,
                     bone,
                     stack,
-                    armBuilder,
+                    currentBuffer.getBuffer(RenderType.entitySolid(loc)),
                     effectivePackedLight,
                     overlayTexture,
                 )
@@ -591,7 +588,7 @@ object AnimationHelper {
                     model.rightSleeve,
                     bone,
                     stack,
-                    sleeveBuilder,
+                    currentBuffer.getBuffer(RenderType.entityTranslucent(loc)),
                     effectivePackedLight,
                     overlayTexture,
                 )
@@ -600,7 +597,7 @@ object AnimationHelper {
                     model.rightArm,
                     bone,
                     stack,
-                    armBuilder,
+                    currentBuffer.getBuffer(RenderType.entitySolid(loc)),
                     effectivePackedLight,
                     overlayTexture,
                 )
@@ -608,7 +605,7 @@ object AnimationHelper {
                     model.rightSleeve,
                     bone,
                     stack,
-                    sleeveBuilder,
+                    currentBuffer.getBuffer(RenderType.entityTranslucent(loc)),
                     effectivePackedLight,
                     overlayTexture,
                 )
