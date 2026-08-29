@@ -19,7 +19,6 @@ import com.atsuishio.superbwarfare.tools.TraceTool
 import com.atsuishio.superbwarfare.tools.mc
 import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
-import com.mojang.math.Axis
 import net.minecraft.client.CameraType
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.renderer.GameRenderer
@@ -66,6 +65,7 @@ object CrossHairOverlay : CommonOverlay("cross_hair") {
     @JvmField
     var vehicleIndicator: Int = 0
 
+    // TODO 删了这个
     @JvmField
     var gunRot: Float = 0f
 
@@ -211,12 +211,6 @@ object CrossHairOverlay : CommonOverlay("cross_hair") {
         val poseStack = guiGraphics.pose()
 
         poseStack.pushPose()
-        poseStack.rotateAround(
-            Axis.ZP.rotationDegrees(-gunRot * Mth.RAD_TO_DEG),
-            w / 2f + moveX,
-            h / 2f + moveY,
-            0f
-        )
 
         RenderHelper.preciseBlit(
             guiGraphics,
@@ -400,7 +394,7 @@ object CrossHairOverlay : CommonOverlay("cross_hair") {
         }
     }
 
-    fun renderGrenadeCrosshair(guiGraphics: GuiGraphics, stack: ItemStack?, screenWidth: Int, screenHeight: Int) {
+    fun renderGrenadeCrosshair(guiGraphics: GuiGraphics, stack: ItemStack, screenWidth: Int, screenHeight: Int) {
         if (ClientEventHandler.zoomTime > 0.8 && GunResource.compute(stack).hideCrosshairWhenZoom) return
 
         guiGraphics.blit(REX, screenWidth / 2 - 16, screenHeight / 2 - 16, 0f, 0f, 32, 32, 32, 32)

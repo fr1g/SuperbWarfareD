@@ -160,8 +160,8 @@ repositories {
     }
 }
 
-fun DependencyHandler.jijImplement(dependency: String, maxVersion: String? = null) {
-    val (name, _, version) = dependency.split(":")
+fun DependencyHandler.jijImplement(dependency: String, maxVersion: String? = null, transitive: Boolean = true) {
+    val (_, _, version) = dependency.split(":")
 
     val firstVersion = version.split(".")
         .takeWhile { Regex("""^\d+$""").matches(it) }
@@ -170,18 +170,19 @@ fun DependencyHandler.jijImplement(dependency: String, maxVersion: String? = nul
     val maximumVersion = maxVersion ?: run {
         val versions = firstVersion.split(".")
         val firstVersionNumber = versions[0].toIntOrNull()
-        val firstVersion = if (firstVersionNumber != null) {
+        val firstVersionString = if (firstVersionNumber != null) {
             (firstVersionNumber + 1).toString()
         } else {
             versions[0]
         }
 
-        return@run "$firstVersion." + versions.drop(1).joinToString(".") { "0" }
+        return@run "$firstVersionString." + versions.drop(1).joinToString(".") { "0" }
     }
 
-    println("$name [$firstVersion,$maximumVersion)")
+//    println("$name [$firstVersion,$maximumVersion)")
 
     val dependencyImpl = implementation(fg.deobf(dependency))
+    (dependencyImpl as ModuleDependency).isTransitive = transitive
     jarJar(dependencyImpl) {
         jarJar.ranged(dependencyImpl, "[$firstVersion,$maximumVersion)")
     }
@@ -198,7 +199,7 @@ dependencies {
 
     jijImplement("top.theillusivec4.curios:curios-forge:5.14.1+1.20.1")
 
-    implementation(fg.deobf("software.bernie.geckolib:geckolib-forge-1.20.1:4.4.6"))
+    jijImplement("software.bernie.geckolib:geckolib-forge-1.20.1:4.4.6")
     implementation(fg.deobf("com.eliotlash.mclib:mclib:20"))
 
     // 从ywzj毛来的Rhino
@@ -209,7 +210,7 @@ dependencies {
     }
 
     // SBM
-    jijImplement("com.github.mcmodderanchor:simplebedrockmodel:2.5.1-forge-mc1.20.1")
+    jijImplement("com.github.mcmodderanchor:simplebedrockmodel:2.5.6-forge-mc1.20.1")
     compileOnly("com.maydaymemory:mae:1.1.2") {
         exclude("com.google.code.findbugs", "jsr305")
         exclude("it.unimi.dsi", "fastutil")
@@ -217,7 +218,7 @@ dependencies {
     }
 
     // Ponder
-    jijImplement("net.createmod.ponder:Ponder-Forge-${project.property("minecraft_version")}:${project.property("ponder_version")}")
+    jijImplement("net.createmod.ponder:Ponder-Forge-${project.property("minecraft_version")}:${project.property("ponder_version")}", transitive = false)
 
     // 飞轮
     jijImplement("dev.engine-room.flywheel:flywheel-forge-${project.property("minecraft_version")}:${project.property("flywheel_version")}")
@@ -226,7 +227,7 @@ dependencies {
 //    jijImplement("curse.maven:handheld-moon-1398036:7300858")
 
     // AUI
-//    jijImplement("com.sighs:ApricityUI-forge-1.20.1:1.1.4")
+    jijImplement("com.sighs:ApricityUI-forge-1.20.1:1.2.3")
 
     // 可选 mod 依赖
 
@@ -242,7 +243,7 @@ dependencies {
     runtimeOnly(fg.deobf("vazkii.patchouli:Patchouli:1.20.1-84-FORGE"))
 
     // Cloth Config相关
-    jijImplement("me.shedaniel.cloth:cloth-config-forge:${project.property("cloth_config_version")}")
+    jijImplement("me.shedaniel.cloth:cloth-config-forge:${project.property("cloth_config_version")}", transitive = false)
 
     // Jade相关
     implementation(fg.deobf("curse.maven:jade-324717:${project.property("jade_version")}"))

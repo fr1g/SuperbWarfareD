@@ -57,7 +57,7 @@ class ModItemModelProvider(output: PackOutput, existingFileHelper: ExistingFileH
         gunItem(ModItems.SENTINEL)
         gunItem(ModItems.SKS)
         gunItem(ModItems.SVD)
-        gunItem(ModItems.TASER)
+        gunItemV2(ModItems.TASER)
         gunItem(ModItems.TRACHELIUM)
         gunItem(ModItems.VECTOR)
         gunItem(ModItems.MP_5)
@@ -69,7 +69,11 @@ class ModItemModelProvider(output: PackOutput, existingFileHelper: ExistingFileH
         gunItem(ModItems.QL_1031)
         gunItem(ModItems.SUPER_STAR_SHOOTER)
 
+        gunItem(ModItems.BEAST_GUN_TEST)
+
         simpleItem(ModItems.VEHICLE_GUN)
+        withExistingParent(ModItems.EMPTY_GUN.id.path, ResourceLocation("item/generated"))
+            .texture("layer0", loc("item/vehicle_gun"))
         simpleItem(ModItems.MORTAR_SHELL)
         simpleItem(ModItems.LARGE_SHELL_AP)
         simpleItem(ModItems.LARGE_SHELL_HE)
@@ -115,6 +119,8 @@ class ModItemModelProvider(output: PackOutput, existingFileHelper: ExistingFileH
         simpleItem(ModItems.LEAD_INGOT)
         simpleItem(ModItems.TUNGSTEN_INGOT)
         simpleItem(ModItems.CEMENTED_CARBIDE_INGOT)
+        simpleItem(ModItems.URANIUM_INGOT)
+        simpleItem(ModItems.RAW_URANIUM)
         simpleItem(ModItems.HIGH_ENERGY_EXPLOSIVES)
         simpleItem(ModItems.GRAIN)
         simpleItem(ModItems.IRON_POWDER)
@@ -124,6 +130,8 @@ class ModItemModelProvider(output: PackOutput, existingFileHelper: ExistingFileH
         simpleItem(ModItems.RAW_CEMENTED_CARBIDE_POWDER)
         simpleItem(ModItems.GALENA)
         simpleItem(ModItems.SCHEELITE)
+        simpleItem(ModItems.SULFUR)
+        simpleItem(ModItems.NITER)
         simpleItem(ModItems.DOG_TAG)
         simpleItem(ModItems.IFF)
         simpleItem(ModItems.TRANSCRIPT)
@@ -377,5 +385,11 @@ class ModItemModelProvider(output: PackOutput, existingFileHelper: ExistingFileH
         this.gunIcon(item, name)
         this.gunBase(item, name)
         this.customSeparatedGunModel(item, name)
+    }
+
+    fun gunItemV2(item: RegistryObject<Item>) {
+        getBuilder(item.id.path)
+            .parent(UncheckedModelFile("builtin/entity"))
+            .guiLight(BlockModel.GuiLight.FRONT)
     }
 }

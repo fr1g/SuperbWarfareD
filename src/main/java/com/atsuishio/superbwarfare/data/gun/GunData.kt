@@ -1,9 +1,6 @@
 package com.atsuishio.superbwarfare.data.gun
 
-import com.atsuishio.superbwarfare.data.DefaultDataSupplier
-import com.atsuishio.superbwarfare.data.JsonPropertyModifier
-import com.atsuishio.superbwarfare.data.PMC
-import com.atsuishio.superbwarfare.data.StringOrVec3
+import com.atsuishio.superbwarfare.data.*
 import com.atsuishio.superbwarfare.data.gun.GunData.Companion.BACKUP_AMMO_CACHE_TICKS
 import com.atsuishio.superbwarfare.data.gun.GunData.Companion.get
 import com.atsuishio.superbwarfare.data.gun.GunProp.Companion.AMMO_CONSUMER
@@ -20,6 +17,8 @@ import com.atsuishio.superbwarfare.data.gun.GunProp.Companion.SHOOT_SHAKE
 import com.atsuishio.superbwarfare.data.gun.subdata.*
 import com.atsuishio.superbwarfare.data.gun.value.*
 import com.atsuishio.superbwarfare.event.GunEventHandler
+import com.atsuishio.superbwarfare.init.ModItems
+import com.atsuishio.superbwarfare.item.gun.EmptyGunItem
 import com.atsuishio.superbwarfare.item.gun.GunItem
 import com.atsuishio.superbwarfare.network.message.receive.ShakeClientMessage
 import com.atsuishio.superbwarfare.perk.Perk
@@ -38,7 +37,6 @@ import net.minecraft.world.phys.Vec3
 import net.minecraftforge.common.util.LazyOptional
 import net.minecraftforge.energy.IEnergyStorage
 import net.minecraftforge.items.IItemHandler
-import org.jetbrains.annotations.ApiStatus
 import java.util.*
 import java.util.function.Function
 import kotlin.math.max
@@ -158,6 +156,8 @@ class GunData private constructor(
      */
     fun initialize() {
         item.init(this)
+
+        nbtVersion.invalidateStructural()
     }
 
     /** Returns the underlying [GunItem]. */
@@ -213,55 +213,6 @@ class GunData private constructor(
     private val jsonPropModifier = JsonPropertyModifier(GunProp.entries)
     private var cache: DefaultGunData? = null
     private var tempModifications: Function<DefaultGunData, DefaultGunData>? = null
-
-    /**
-     * Computes modified property values into a standalone [DefaultGunData] snapshot.
-     *
-     * @param useCache whether to re-use cached result if available.
-     * @return computed gun data properties.
-     * @deprecated Use [get] with [GunProp] keys instead for optimized property resolution.
-     */
-    @JvmOverloads
-    @Deprecated("Use get() instead")
-    @ApiStatus.ScheduledForRemoval
-    fun compute(useCache: Boolean = true): DefaultGunData {
-        if (cache != null && useCache) return cache!!
-
-        var rawData = getDefault().copy()
-//
-//        // property override tag
-//        jsonPropModifier.update(propertyOverrideString.get())
-//        rawData = jsonPropModifier.computeProperties(this, rawData)
-//
-//        // gun modifiers
-//        rawData = item.computeProperties(this, rawData)
-//
-//        // FireMode
-//        rawData = selectedFireModeInfo(rawData.availableFireModes()).computeProperties(this, rawData)
-//
-//        // AmmoConsumer
-//        rawData = selectedAmmoConsumer(rawData.getProcessedAmmoConsumers()).computeProperties(this, rawData)
-//
-//        // perk
-//        for (type in PERK_TYPES) {
-//            val instance = perk.get(type) ?: continue
-//
-//            rawData = instance.computeProperties(this, rawData)
-//        }
-//
-//        // Temporary property modifications
-//        if (tempModifications != null) {
-//            rawData = tempModifications!!.apply(rawData)
-//        }
-//
-//        rawData.limit()
-//        if (useCache) {
-//            cache = rawData
-//        }
-
-        return rawData
-    }
-
     private val pmcInstance: PMC<GunData, DefaultGunData> by lazy { PMC(this) }
     private var cachedStructuralVersion: Int = -1
 
@@ -449,6 +400,8 @@ class GunData private constructor(
         this.bolt.needed.reset()
         this.charge.starter.finish()
         this.charge.timer.reset()
+
+        nbtVersion.invalidateStructural()
     }
 
     /**
@@ -501,11 +454,15 @@ class GunData private constructor(
     /** Starts reload sequence in next tick update. */
     fun startReload() {
         this.reload.reloadStarter.markStart()
+
+        nbtVersion.invalidateStructural()
     }
 
     /** Starts manual bolt-action sequence. */
     fun startBolt() {
         this.bolt.actionTimer.set(get(BOLT_ACTION_TIME) + 1)
+
+        nbtVersion.invalidateStructural()
     }
 
     /**
@@ -717,6 +674,8 @@ class GunData private constructor(
 
         reload.setState(ReloadState.NOT_RELOADING)
         this.fireIndex.reset()
+
+        nbtVersion.invalidateStructural()
     }
 
     /**
@@ -1056,16 +1015,20 @@ class GunData private constructor(
     }
 
     init {
-        require(stack.item is GunItem) { "stack is not GunItem!" }
-
-        val gunItem = stack.item as GunItem
+        val realGunItem = stack.item as? GunItem
+        val useEmptyGunData = realGunItem == null || stack.isEmpty
+        val gunItem = if (useEmptyGunData) ModItems.EMPTY_GUN.get() as GunItem else realGunItem
         this.item = gunItem
         this.stack = stack
-        this.id = getRegistryId(stack.item)
+        this.id = if (useEmptyGunData) EmptyGunItem.EMPTY_GUN_ID else getRegistryId(stack.item)
 
-        this.defaultDataSupplier = initialDefaultDataSupplier ?: { gunItem.getDefaultData(this) }
+        this.defaultDataSupplier = if (useEmptyGunData) {
+            { EmptyGunItem.EMPTY_GUN_DATA }
+        } else {
+            initialDefaultDataSupplier ?: { gunItem.getDefaultData(this) }
+        }
 
-        this.tag = stack.getOrCreateTag()
+        this.tag = if (useEmptyGunData) CompoundTag() else stack.getOrCreateTag()
 
         gunDataTag = getOrPut("GunData")
         perkTag = getOrPut("Perks")
@@ -1123,7 +1086,7 @@ class GunData private constructor(
 
     companion object {
         /** Tick interval between backup ammo inventory re-computations. */
-        const val BACKUP_AMMO_CACHE_TICKS: Long = 4L
+        const val BACKUP_AMMO_CACHE_TICKS: Long = 10L
 
         /**
          * Cached array of all [Perk.Type] entries.
@@ -1170,8 +1133,8 @@ class GunData private constructor(
         /** Retrieves default un-modified properties by item registry identifier. */
         @JvmStatic
         fun getDefault(id: String): DefaultGunData {
-            val isDefault = !com.atsuishio.superbwarfare.data.CustomData.GUN_DATA.containsKey(id)
-            val data = com.atsuishio.superbwarfare.data.CustomData.GUN_DATA.getOrElseGet(id) { DefaultGunData() }
+            val isDefault = !CustomData.GUN_DATA.containsKey(id)
+            val data = CustomData.GUN_DATA.getOrElseGet(id) { DefaultGunData() }
             data.isDefaultData = isDefault
             return data
         }
@@ -1191,14 +1154,6 @@ class GunData private constructor(
             var id = item.descriptionId
             id = id.substring(id.indexOf(".") + 1).replace('.', ':')
             return id
-        }
-
-        @JvmStatic
-        @Suppress("unused")
-        @Deprecated("use get() instead", level = DeprecationLevel.ERROR)
-        @ApiStatus.ScheduledForRemoval
-        fun compute(stack: ItemStack): DefaultGunData {
-            error("use get() instead!")
         }
 
         /** Priority mapping helper for perk execution order. */

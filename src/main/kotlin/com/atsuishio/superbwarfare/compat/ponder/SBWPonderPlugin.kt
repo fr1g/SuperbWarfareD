@@ -17,8 +17,6 @@ object SBWPonderPlugin : PonderPlugin {
         VehicleAssemblingTablePonderScene.register(helper)
         AircraftCatapultPonderScene.register(helper)
         BiogasGeneratorPonderScene.register(helper)
-        BlueprintResearchTablePonderScene.register(helper)
-        CatapultControllerPonderScene.register(helper)
         ContainerPonderScene.register(helper)
         CreativeChargingStationPonderScene.register(helper)
         DpsGeneratorDeployerPonderScene.register(helper)

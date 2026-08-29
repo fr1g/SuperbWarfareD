@@ -38,7 +38,7 @@ object ModTabs {
             .icon { ItemStack(ModItems.TASER.get()) }
             .displayItems { param: CreativeModeTab.ItemDisplayParameters, output: CreativeModeTab.Output ->
                 ModItems.GUNS.getEntries().forEach {
-                    if (it === ModItems.VEHICLE_GUN) return@forEach
+                    if (it === ModItems.VEHICLE_GUN || it === ModItems.EMPTY_GUN) return@forEach
                     output.accept(it.get())
 
                     val stack = ItemStack(it.get())
@@ -154,6 +154,7 @@ object ModTabs {
     fun buildTabContentsVanilla(tabData: BuildCreativeModeTabContentsEvent) {
         if (tabData.tabKey === CreativeModeTabs.SPAWN_EGGS) {
             tabData.accept(ModItems.SENPAI_SPAWN_EGG.get())
+            tabData.accept(ModItems.CREEPING_SENPAI_SPAWN_EGG.get())
             tabData.accept(ModItems.STEEL_COIL_SPAWN_EGG.get())
         }
     }
